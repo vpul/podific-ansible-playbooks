@@ -1,0 +1,62 @@
+# IMPORTANT: Use SSH-COPY-ID to copy public key before runnig this playbook.
+
+- hosts: all
+  become: true
+  remote_user: root
+  vars_files:
+    - vars/bootstrap_var.yml
+
+  tasks:
+    # User + Key Setup
+    - name: Create a new regular user with sudo privileges
+      user:
+        name: "{{ create_user }}"
+        state: present
+        groups: root
+
+    - name: Allow 'admin' group to have passwordless sudo
+      lineinfile:
+        path: "/etc/sudoers.d/{{ create_user }}"
+        state: present
+        create: true
+        regexp: "^%{{ create_user }}"
+        line: "%{{ create_user }} ALL=(ALL) NOPASSWD: ALL"
+        owner: root
+        group: root
+        mode: 0440
+
+    - name: Set authorized key for remote user
+      authorized_key:
+        user: "{{ create_user }}"
+        state: present
+        key: "{{ copy_local_key }}"
+
+    - name: Disable password authentication for root
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        state: present
+        regexp: "^#?PermitRootLogin"
+        line: "PermitRootLogin prohibit-password"
+
+    # Update & Install packages
+    - name: Update apt cache
+      apt: update_cache=yes
+
+    - name: Dist upgrade
+      apt: upgrade=dist
+
+    - name: Install Required Packages
+      tags: install, packages
+      apt: "name={{ sys_packages }} state=latest"
+
+    # UFW Setup
+    - name: UFW - Allow SSH connections
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: UFW - Deny all other incoming traffic by default
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming

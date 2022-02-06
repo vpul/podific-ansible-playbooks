@@ -1,0 +1,3 @@
+create_user: vipul
+copy_local_key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/default.pub') }}"
+sys_packages: ["curl", "git", "ufw", "gpg"]
