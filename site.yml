@@ -1,0 +1,22 @@
+- hosts: all
+  become: true
+
+  tasks:
+    # Install Mongodb
+    - name: Add an Mongodb Apt signing key
+      tags: mongodb
+      apt_key:
+        url: https://www.mongodb.org/static/pgp/server-5.0.asc
+        state: present
+
+    - name: Add Mongodb into sources list
+      tags: mongodb
+      apt_repository:
+        repo: deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu {{ansible_distribution_release}}/mongodb-org/5.0 multiverse
+        state: present
+
+    - name: Update apt cache
+      apt: update_cache=yes
+
+    - name: Install Mongodb
+      apt: name=mongodb-org
