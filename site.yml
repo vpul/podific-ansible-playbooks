@@ -24,13 +24,14 @@
     - name: Update apt cache
       apt: update_cache=yes
 
-    - name: Install Mongodb, Redis, Python3-pip,
-      tags: install, mongodb, redis, python3-pip
+    - name: Install Mongodb, Redis, Nodejs, Python3-pip,
+      tags: install, mongodb, redis, nodejs, python3-pip
       apt:
         pkg:
           - mongodb-org
           - redis-server
           - python3-pip
+          - nodejs
 
     - name: Start mongod service and enable at startup
       tags: mongodb, service, start
