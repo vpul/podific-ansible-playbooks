@@ -12,19 +12,24 @@
         state: present
 
     - name: Add Mongodb into sources list
-      tags: mongodb
+      tags: mongodb, sources-list
       apt_repository:
         repo: deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu {{ansible_distribution_release}}/mongodb-org/5.0 multiverse
         state: present
 
+    - name: Add Nodejs 16 PPA to sources list
+      tags: nodejs, sources-list
+      shell: "curl -sL https://deb.nodesource.com/setup_16.x | sudo bash -"
+
     - name: Update apt cache
       apt: update_cache=yes
 
-    - name: Install Mongodb
-      tags: install, mongodb
+    - name: Install Mongodb, Redis, Python3-pip,
+      tags: install, mongodb, redis, python3-pip
       apt:
         pkg:
           - mongodb-org
+          - redis-server
           - python3-pip
 
     - name: Start mongod service and enable at startup
@@ -66,4 +71,33 @@
       tags: mongodb, service, restart
       service:
         name: mongod
+        state: restarted
+
+    - name: Configure Redis to use systemd
+      tags: redis, systemd
+      lineinfile:
+        path: /etc/redis/redis.conf
+        state: present
+        regexp: "^supervised"
+        line: "supervised systemd"
+
+    - name: Start redis service and enable at startup
+      tags: redis, service, start
+      service:
+        name: redis.service
+        state: started
+        enabled: yes
+
+    - name: Set Redis admin password
+      tags: redis, password
+      lineinfile:
+        path: /etc/redis/redis.conf
+        state: present
+        regexp: "# requirepass"
+        line: "requirepass {{ redis_password }}"
+
+    - name: Restart redis service
+      tags: redis, service, restart
+      service:
+        name: redis.service
         state: restarted
