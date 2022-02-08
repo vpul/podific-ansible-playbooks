@@ -19,7 +19,6 @@
         path: "/etc/sudoers.d/{{ create_user }}"
         state: present
         create: true
-        regexp: "^%{{ create_user }}"
         line: "%{{ create_user }} ALL=(ALL) NOPASSWD: ALL"
         owner: root
         group: root

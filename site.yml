@@ -1,5 +1,7 @@
 - hosts: all
   become: true
+  vars_files:
+    - vars/site_vars.yml
 
   tasks:
     # Install Mongodb
@@ -19,4 +21,49 @@
       apt: update_cache=yes
 
     - name: Install Mongodb
-      apt: name=mongodb-org
+      tags: install, mongodb
+      apt:
+        pkg:
+          - mongodb-org
+          - python3-pip
+
+    - name: Start mongod service and enable at startup
+      tags: mongodb, service, start
+      service:
+        name: mongod
+        state: started
+        enabled: yes
+
+    # pymongo is required for setting up user in Mongodb
+    - name: Install the latest pymongo package
+      tags: mongodb, pymongo
+      pip: name=pymongo state=latest
+
+    - name: Create MongoDB root user
+      tags: mongodb, create-db-user
+      mongodb_user:
+        login_port: 27017
+        database: admin
+        name: root
+        password: "{{ mongodb_password }}"
+        roles: root
+      register: result
+      # ignore failure on 'authentication errors' because we have already created a user
+      failed_when:
+        - result.changed == false
+        - '"Unable to add or update user: command createUser requires authentication" not in result.msg'
+
+    - name: Enable Mongodb authorization
+      tags: mongodb, enable-authorization
+      blockinfile:
+        path: /etc/mongod.conf
+        insertafter: "#security:"
+        block: |
+          security:
+              authorization: enabled
+
+    - name: Restart mongod service
+      tags: mongodb, service, restart
+      service:
+        name: mongod
+        state: restarted
