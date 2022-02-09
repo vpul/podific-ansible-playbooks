@@ -24,14 +24,15 @@
     - name: Update apt cache
       apt: update_cache=yes
 
-    - name: Install Mongodb, Redis, Nodejs, Python3-pip,
-      tags: install, mongodb, redis, nodejs, python3-pip
+    - name: Install mongodb, redis, nodejs, python3-pip, nginx
+      tags: install, mongodb, redis, nodejs, python3-pip, nginx
       apt:
         pkg:
           - mongodb-org
           - redis-server
           - python3-pip
           - nodejs
+          - nginx
 
     - name: Start mongod service and enable at startup
       tags: mongodb, service, start
@@ -102,3 +103,9 @@
       service:
         name: redis.service
         state: restarted
+
+    - name: UFW - Allow Nginx HTTP connections
+      tags: nginx, http, ufw, firewall
+      ufw:
+        rule: allow
+        name: Nginx HTTP
