@@ -116,10 +116,41 @@
       copy:
         src: "{{item}}"
         dest: "/home/{{ create_user }}/.ssh/"
+        group: "{{ create_user }}"
+        mode: "400"
       loop:
         - files/ssh-deploy-keys/deploy-keys.pub
         - files/ssh-deploy-keys/deploy-keys
 
-    - name: Refister SSH deploy keys
+    - name: Register SSH deploy keys
       tags: ssh, deploy, keys
-      shell: 'eval "$(ssh-agent -s)" && ssh-add ~/.ssh/deploy-keys'
+      shell: 'eval "$(ssh-agent -s)" && ssh-add /home/{{ create_user }}/.ssh/deploy-keys'
+
+    - name: Install PM2 globally
+      tags: pm2, npm
+      npm:
+        name: pm2
+        global: yes
+
+    - name: Enable pm2 on boot
+      tags: pm2
+      shell: "sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u {{ create_user }} --hp /home/{{ create_user }}"
+
+    # Required for git cloning
+    - name: Add github to the list of known sources
+      tags: git, clone, ssh
+      shell: "ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts"
+
+    - name: Git clone Podific api repository
+      tags: git, clone, repo, repository, api, app
+      git:
+        repo: "git@github.com:vpul/podific-api.git"
+        key_file: /home/{{ create_user }}/.ssh/deploy-keys
+        dest: /home/{{ create_user }}/podific-api
+        clone: yes
+
+    - name: Copy .env file to the server
+      tags: env-file, copy
+      copy:
+        src: "~/podific-api/.env"
+        dest: "/home/{{ create_user }}/podific-api/.env"
