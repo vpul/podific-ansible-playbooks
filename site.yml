@@ -2,6 +2,7 @@
   become: true
   vars_files:
     - vars/site_vars.yml
+    - vars/bootstrap_var.yml
 
   tasks:
     # Install Mongodb
@@ -109,3 +110,16 @@
       ufw:
         rule: allow
         name: Nginx HTTP
+
+    - name: Copy SSH deploy keys to the server
+      tags: ssh, deploy, keys
+      copy:
+        src: "{{item}}"
+        dest: "/home/{{ create_user }}/.ssh/"
+      loop:
+        - files/ssh-deploy-keys/deploy-keys.pub
+        - files/ssh-deploy-keys/deploy-keys
+
+    - name: Refister SSH deploy keys
+      tags: ssh, deploy, keys
+      shell: 'eval "$(ssh-agent -s)" && ssh-add ~/.ssh/deploy-keys'
