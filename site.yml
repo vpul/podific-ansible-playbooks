@@ -176,6 +176,11 @@
         src: "{{ env_file_source_path }}"
         dest: "/home/{{ create_user }}/{{ project_dir_name }}/source/.env"
 
+    # Use bash as default shell instead of dash for non-root user
+    - name: Use bash as default shell
+      tags: shell, bash
+      shell: "sudo chsh -s /bin/bash {{ create_user }}"
+
   handlers:
     - name: Restart nginx service
       tags: nginx, service, restart
