@@ -8,5 +8,6 @@ Instructions for running playbooks:
 2. Execuete 'bootstrap.yml' playbook to create non-root user account.
 3. Ensure 'vaultpass' file contains vault password.
 4. Ensure '.env' file's path in the vars/site_vars.yml is correct.
-5. Execute 'site.yml' to orchestrate server.
-6. Now you may use PM2 to deploy the code.
+5. Ensure 'api_uri' port in the vars/site_vars.yml matches with the one in .env file.
+6. Execute 'site.yml' to orchestrate server.
+7. Now you may use PM2 to deploy the code.

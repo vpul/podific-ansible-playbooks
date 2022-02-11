@@ -152,5 +152,19 @@
     - name: Copy .env file to the server
       tags: env-file, copy
       copy:
-        src: "~/podific-api/.env"
+        src: "{{ env_file_source_path }}"
         dest: "/home/{{ create_user }}/podific-api/.env"
+
+    - name: Generate nginx reverse proxy config file
+      tags: nginx, config
+      template:
+        src: "files/nginx/nginx-rev-proxy.j2"
+        dest: "/etc/nginx/sites-available/default"
+      notify: Restart nginx service
+
+  handlers:
+    - name: Restart nginx service
+      tags: nginx, service, restart
+      service:
+        name: nginx
+        state: restarted
