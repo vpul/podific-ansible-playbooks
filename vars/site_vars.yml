@@ -15,5 +15,8 @@ redis_password: !vault |
   37383464633336666432383731313665396330396234393161373533306161353662
 
 env_file_source_path: "~/podific-api/.env"
+project_github_url: "git@github.com:vpul/podific-api.git"
+project_dir_name: "podific-api"
+
 # Ensure api_uri port matches with the one in .env
 api_uri: "http://localhost:8080"

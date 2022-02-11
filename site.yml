@@ -126,34 +126,55 @@
     # Clone Project Repo from Github
     - name: Copy SSH deploy keys to the server
       tags: ssh, deploy, keys
+      become: true
+      become_user: "{{ create_user }}" # Copy as vipul user and not root
       copy:
         src: "{{item}}"
         dest: "/home/{{ create_user }}/.ssh/"
         group: "{{ create_user }}"
         mode: "400"
       loop:
-        - files/ssh-deploy-keys/deploy-keys.pub
-        - files/ssh-deploy-keys/deploy-keys
-      notify: Register SSH deploy keys
+        - files/ssh/deploy-keys.pub
+        - files/ssh/deploy-keys
+
+    - name: Register SSH deploy keys
+      tags: ssh, deploy, keys
+      become: true
+      become_user: "{{ create_user }}" # Copy as vipul user and not root
+      shell: 'eval "$(ssh-agent -s)" && ssh-add /home/{{ create_user }}/.ssh/deploy-keys'
+
+    - name: Configure SSH to use deploy-keys for SSH connection (for github repo clone)
+      tags: ssh, deploy, keys, git, github
+      become: true
+      become_user: "{{ create_user }}" # Copy as vipul user and not root
+      copy:
+        src: "files/ssh/config"
+        dest: "/home/{{ create_user }}/.ssh/config"
 
     - name: Add github to the list of known sources # Required for git cloning
       tags: git, clone, ssh
+      become: true
+      become_user: "{{ create_user }}" # Copy as vipul user and not root
       shell: "ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts"
 
     - name: Git clone Podific api repository
       tags: git, clone, repo, repository, api, app
+      become: true
+      become_user: "{{ create_user }}" # Copy as vipul user and not root
       git:
-        repo: "git@github.com:vpul/podific-api.git"
+        repo: "{{ project_github_url }}"
         key_file: /home/{{ create_user }}/.ssh/deploy-keys
-        dest: /home/{{ create_user }}/podific-api
+        dest: /home/{{ create_user }}/{{ project_dir_name }}/source # Source dir is needed for PM2 deploy
         clone: yes
 
     # Copy .env to the project directory
     - name: Copy .env file to the server
       tags: env-file, copy
+      become: true
+      become_user: "{{ create_user }}" # Copy as vipul user and not root
       copy:
         src: "{{ env_file_source_path }}"
-        dest: "/home/{{ create_user }}/podific-api/.env"
+        dest: "/home/{{ create_user }}/{{ project_dir_name }}/source/.env"
 
   handlers:
     - name: Restart nginx service
@@ -173,7 +194,3 @@
       service:
         name: redis.service
         state: restarted
-
-    - name: Register SSH deploy keys
-      tags: ssh, deploy, keys
-      shell: 'eval "$(ssh-agent -s)" && ssh-add /home/{{ create_user }}/.ssh/deploy-keys'
