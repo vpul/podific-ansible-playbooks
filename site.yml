@@ -98,6 +98,29 @@
         line: "requirepass {{ redis_password }}"
       notify: Restart redis service
 
+    - name: Disable Transparent Huge Pages (THP), to resolve Redis latency & memory issues
+      tags: redis, thp
+      shell: "sudo echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+      notify: Restart redis service
+
+    - name: Disable THP on boot
+      tags: redis, thp
+      copy:
+        src: "files/rc.local"
+        dest: "/etc/rc.local"
+        mode: "755"
+      notify: Enable and restart rc-local
+
+    - name: Set overcommit_memory to 1, for Redis background save on low memory conditions
+      tags: redis, overcommmit-memory
+      shell: "sudo sysctl vm.overcommit_memory=1"
+
+    - name: Set overcommit_memory to 1 (on boot)
+      tags: redis, overcommmit-memory
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: vm.overcommit_memory = 1
+
     # Setup nginx
     - name: Generate nginx reverse proxy config file
       tags: nginx, config
@@ -199,3 +222,10 @@
       service:
         name: redis.service
         state: restarted
+
+    - name: Enable and restart rc-local
+      tags: rc-local, redis, thp
+      service:
+        name: rc-local
+        state: restarted
+        enabled: yes
