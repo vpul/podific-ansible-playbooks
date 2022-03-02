@@ -17,7 +17,6 @@ redis_password: !vault |
 env_file_source_path: "~/podific-api/.env"
 project_github_url: "git@github.com:vpul/podific-api.git"
 project_dir_name: "podific-api"
-redis_max_memory: "1.2gb"
 
 # Ensure api_uri port matches with the one in .env
 api_uri: "http://localhost:8080"

@@ -1,4 +1,4 @@
-- hosts: all
+- hosts: web_servers
   become: true
   vars_files:
     - vars/site_vars.yml
@@ -217,6 +217,107 @@
         name: mongod
         state: restarted
 
+    - name: Restart redis service
+      tags: redis, service, restart
+      service:
+        name: redis.service
+        state: restarted
+
+    - name: Enable and restart rc-local
+      tags: rc-local, redis, thp
+      service:
+        name: rc-local
+        state: restarted
+        enabled: yes
+
+- hosts: redis_servers
+  become: true
+  vars_files:
+    - vars/site_vars.yml
+    - vars/bootstrap_var.yml
+
+  tasks:
+    # Update APT Cache
+    - name: Update apt cache
+      apt: update_cache=yes
+
+    # Install required packages
+    - name: Install redis
+      tags: install, redis
+      apt:
+        pkg:
+          - redis-server
+
+    # Setup redis
+    - name: Configure Redis to use systemd
+      tags: redis, systemd
+      lineinfile:
+        path: /etc/redis/redis.conf
+        state: present
+        regexp: "^supervised"
+        line: "supervised systemd"
+
+    - name: Start redis service and enable at startup
+      tags: redis, service, start
+      service:
+        name: redis.service
+        state: started
+        enabled: yes
+
+    - name: Set Redis admin password
+      tags: redis, password
+      lineinfile:
+        path: /etc/redis/redis.conf
+        state: present
+        regexp: "# requirepass"
+        line: "requirepass {{ redis_password }}"
+      notify: Restart redis service
+
+    - name: Disable Transparent Huge Pages (THP), to resolve Redis latency & memory issues
+      tags: redis, thp
+      shell: "sudo echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+      notify: Restart redis service
+
+    - name: Disable THP on boot
+      tags: redis, thp
+      copy:
+        src: "files/rc.local"
+        dest: "/etc/rc.local"
+        mode: "755"
+      notify: Enable and restart rc-local
+
+    - name: Set overcommit_memory to 1, for Redis background save on low memory conditions
+      tags: redis, overcommmit-memory
+      shell: "sudo sysctl vm.overcommit_memory=1"
+
+    - name: Set overcommit_memory to 1 (on boot)
+      tags: redis, overcommmit-memory
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: vm.overcommit_memory = 1
+
+    - name: UFW - Allow Redis connections
+      tags: redis, ufw, firewall
+      ufw:
+        rule: allow
+        port: 6379
+        proto: tcp
+
+    - name: Bind to 0.0.0.0 for enabling remote host connection
+      tags: redis
+      lineinfile:
+        path: /etc/redis/redis.conf
+        state: present
+        regexp: "^bind"
+        line: "bind 0.0.0.0"
+      notify: Restart redis service
+
+    # Use bash as default shell instead of dash for non-root user
+    - name: Use bash as default shell
+      tags: shell, bash
+      shell: "sudo chsh -s /bin/bash {{ create_user }}"
+
+  handlers:
     - name: Restart redis service
       tags: redis, service, restart
       service:
